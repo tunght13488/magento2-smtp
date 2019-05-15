@@ -2,7 +2,10 @@
 
 namespace MageWonder\Smtp\Model;
 
-class Transport implements \Magento\Framework\Mail\TransportInterface
+use Magento\Framework\Mail\MessageInterface;
+use Magento\Framework\Mail\TransportInterface;
+
+class Transport implements TransportInterface
 {
     /**
      * @var \MageWonder\Smtp\Model\Message
@@ -20,28 +23,28 @@ class Transport implements \Magento\Framework\Mail\TransportInterface
     protected $_helper;
 
     /**
-     * @var Api\Mandrill
+     * @var \MageWonder\Smtp\Model\Api
      */
     protected $_api;
 
     /**
-     * @param \Magento\Framework\Mail\MessageInterface $message
-     * @param \Psr\Log\LoggerInterface $logger
-     * @param \MageWonder\Smtp\Helper\Data $helper
+     * @inheritDoc
      */
     public function __construct(
-        \Magento\Framework\Mail\MessageInterface $message,
+        MessageInterface $message,
         \Psr\Log\LoggerInterface $logger,
         \MageWonder\Smtp\Helper\Data $helper,
         \MageWonder\Smtp\Model\Api $api
-    )
-    {
+    ) {
         $this->_message = $message;
-        $this->_logger  = $logger;
-        $this->_helper  = $helper;
-        $this->_api     = $api;
+        $this->_logger = $logger;
+        $this->_helper = $helper;
+        $this->_api = $api;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function sendMessage()
     {
         $message = [
@@ -50,42 +53,46 @@ class Transport implements \Magento\Framework\Mail\TransportInterface
             'from_email' => $this->_message->getFrom(),
         ];
 
-        foreach($this->_message->getTo() as $to)
-        {
+        foreach ($this->_message->getTo() as $to) {
             $message['to'][] = [
-                'email' => $to
+                'email' => $to,
             ];
         }
 
-        foreach($this->_message->getBcc() as $bcc)
-        {
+        foreach ($this->_message->getBcc() as $bcc) {
             $message['to'][] = [
                 'email' => $bcc,
-                'type'  => 'bcc'
+                'type'  => 'bcc',
             ];
         }
 
-        if($att = $this->_message->getAttachments())
-        {
+        if ($att = $this->_message->getAttachments()) {
             $message['attachments'] = $att;
         }
 
-        if($headers = $this->_message->getHeaders())
-        {
+        if ($headers = $this->_message->getHeaders()) {
             $message['headers'] = $headers;
         }
 
-        switch($this->_message->getType())
-        {
-            case \Magento\Framework\Mail\MessageInterface::TYPE_HTML:
+        switch ($this->_message->getType()) {
+            case MessageInterface::TYPE_HTML:
                 $message['html'] = $this->_message->getBody();
                 break;
-            case \Magento\Framework\Mail\MessageInterface::TYPE_TEXT:
+            case MessageInterface::TYPE_TEXT:
                 $message['text'] = $this->_message->getBody();
                 break;
         }
 
         $this->_api->send($message);
+
         return true;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getMessage()
+    {
+        return $this->_message;
     }
 }
